@@ -208,24 +208,6 @@ const handlePortableWelcomeContinue = async () => {
   }
 }
 
-const checkForUpdatesPortable = async () => {
-  console.log("Checking portable updates, current settings:", portableSettings)
-
-  if (portableSettings.disableUpdateNotifications) {
-    console.log("Update notifications disabled for portable mode")
-    return
-  }
-
-  statusMessage.value = "Checking for updates..."
-
-  try {
-    await updaterClient.checkForUpdates(true)
-    console.log("Portable update check completed")
-  } catch (err) {
-    console.error("Error checking for portable updates:", err)
-  }
-}
-
 const initializePortableMode = async () => {
   try {
     const latestDir = await invoke<string>("get_latest_dir")
@@ -246,8 +228,6 @@ const initializePortableMode = async () => {
   portableSettings.autoSkipWelcome = settings.autoSkipWelcome
 
   console.log("Updated reactive portableSettings:", portableSettings)
-
-  await checkForUpdatesPortable()
 
   if (!settings.autoSkipWelcome) {
     console.log("Showing portable welcome screen")

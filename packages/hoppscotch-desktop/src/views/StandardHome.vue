@@ -119,36 +119,8 @@ const cancelUpdate = async () => {
   }
 }
 
-const checkForUpdates = async () => {
-  try {
-    statusMessage.value = "Checking for updates..."
-    const updateInfo = await updaterClient.checkForUpdates(false)
-
-    if (updateInfo.available) {
-      console.log("Updates available (standard)")
-      updateMessage.value =
-        updateInfo.releaseNotes ||
-        `Version ${updateInfo.latestVersion} is available`
-      appState.value = AppState.UPDATE_AVAILABLE
-      return true
-    }
-
-    return false
-  } catch (err) {
-    console.error("Error checking for updates:", err)
-    // NOTE: No need to show error for update check failures, just continue,
-    // because `check()` tends to fail quite often due to inexplicable reasons,
-    // `updater.rs` is far more stable options so continuing will
-    // let the Rust side handle this.
-    return false
-  }
-}
-
 const initializeStandardMode = async () => {
-  const hasUpdates = await checkForUpdates()
-  if (!hasUpdates) {
-    await loadRecent()
-  }
+  await loadRecent()
 }
 
 onMounted(async () => {

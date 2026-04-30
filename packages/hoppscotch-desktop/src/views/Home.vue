@@ -134,7 +134,6 @@ import { LazyStore } from "@tauri-apps/plugin-store"
 import { load, close } from "@hoppscotch/plugin-appload"
 import { getVersion } from "@tauri-apps/api/app"
 
-import { UpdateStatus, CheckResult, UpdateState } from "~/types"
 import { UpdaterService } from "~/utils/updater"
 
 import IconLucideAlertCircle from "~icons/lucide/alert-circle"
@@ -172,7 +171,6 @@ interface ConnectionState {
 
 const appStore = new LazyStore(APP_STORE_PATH)
 const appState = ref<AppState>(AppState.LOADING)
-const updateStatus = ref("")
 const updateMessage = ref("")
 const downloadProgress = ref<{ downloaded: number; total?: number }>({
   downloaded: 0,
@@ -202,56 +200,6 @@ const saveConnectionState = async (state: ConnectionState) => {
   } catch (err) {
     console.error("Failed to save connection state:", err)
   }
-}
-
-const setupUpdateStateWatcher = async () => {
-  const unsubscribe = await appStore.onKeyChange<UpdateState>(
-    "updateState",
-    (newValue) => {
-      if (!newValue) return
-
-      updateStatus.value = newValue.status
-      updateMessage.value = newValue.message || ""
-
-      if (newValue.status === UpdateStatus.AVAILABLE) {
-        appState.value = AppState.UPDATE_AVAILABLE
-      } else if (newValue.status === UpdateStatus.ERROR) {
-        error.value = newValue.message || "Unknown error"
-        appState.value = AppState.ERROR
-        // Stop progress polling on error
-        stopProgressPolling()
-      } else if (
-        newValue.status === UpdateStatus.DOWNLOADING ||
-        newValue.status === UpdateStatus.INSTALLING
-      ) {
-        appState.value = AppState.UPDATE_IN_PROGRESS
-        // Start progress polling when downloading
-        if (newValue.status === UpdateStatus.DOWNLOADING) {
-          startProgressPolling()
-        } else {
-          // Stop progress polling when installing
-          stopProgressPolling()
-        }
-      } else if (newValue.status === UpdateStatus.READY_TO_RESTART) {
-        appState.value = AppState.UPDATE_READY
-        // Stop progress polling when ready to restart
-        stopProgressPolling()
-      }
-    }
-  )
-
-  return unsubscribe
-}
-
-const startProgressPolling = () => {
-  if (progressPollingInterval) return
-
-  progressPollingInterval = setInterval(() => {
-    const currentProgress = updaterService.getCurrentProgress()
-    if (currentProgress.downloaded > downloadProgress.value.downloaded) {
-      downloadProgress.value = currentProgress
-    }
-  }, 100)
 }
 
 const stopProgressPolling = () => {
@@ -377,18 +325,6 @@ const initialize = async () => {
 
     statusMessage.value = "Initializing stores..."
     await appStore.init()
-    await updaterService.initialize()
-
-    await setupUpdateStateWatcher()
-
-    statusMessage.value = "Checking for updates..."
-    const checkResult = await updaterService.checkForUpdates()
-
-    if (checkResult === CheckResult.AVAILABLE) {
-      console.log("Updates available, prompting for install")
-      appState.value = AppState.UPDATE_AVAILABLE
-      return
-    }
 
     await loadVendored()
   } catch (err) {
